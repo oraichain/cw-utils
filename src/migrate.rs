@@ -1,6 +1,20 @@
 use cosmwasm_std::{StdError, StdResult, Storage};
-use cw2::{get_contract_version, set_contract_version};
+use cw_storage_plus::Item;
 use semver::Version;
+
+#[cw_serde]
+pub struct ContractVersion {
+    /// contract is the crate name of the implementing contract, eg. `crate:cw20-base`
+    /// we will use other prefixes for other languages, and their standard global namespacing
+    pub contract: String,
+    /// version is any string that this implementation knows. It may be simple counter "1", "2".
+    /// or semantic version on release tags "v0.7.0", or some custom feature flag list.
+    /// the only code that needs to understand the version parsing is code that knows how to
+    /// migrate from the given contract (and is tied to it's implementation somehow)
+    pub version: String,
+}
+
+pub const CONTRACT: Item<ContractVersion> = Item::new("contract_info");
 
 /// This function not only validates that the right contract and version can be migrated, but also
 /// updates the contract version from the original (stored) version to the new version.
@@ -11,7 +25,7 @@ pub fn ensure_from_older_version(
     new_version: &str,
 ) -> StdResult<Version> {
     let version: Version = new_version.parse().map_err(from_semver)?;
-    let stored = get_contract_version(storage)?;
+    let stored = CONTRACT.load(storage)?;
     let storage_version: Version = stored.version.parse().map_err(from_semver)?;
 
     if name != stored.contract {
@@ -28,7 +42,11 @@ pub fn ensure_from_older_version(
     }
     if storage_version < version {
         // we don't need to save anything if migrating from the same version
-        set_contract_version(storage, name, new_version)?;
+        let val = ContractVersion {
+            contract: name.into(),
+            version: new_version.into(),
+        };
+        CONTRACT.save(storage, &val)
     }
 
     Ok(storage_version)

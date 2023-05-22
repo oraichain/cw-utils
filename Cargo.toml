@@ -13,13 +13,12 @@ homepage = "https://cosmwasm.com"
 [dependencies]
 cosmwasm-schema = { git = "https://github.com/oraichain/cosmwasm.git" }
 cosmwasm-std = { git = "https://github.com/oraichain/cosmwasm.git", default-features = false }
-cw2 = { git = "https://github.com/oraichain/cw-plus.git", branch = "oraichain" }
+cw-storage-plus = { git ="https://github.com/oraichain/cw-storage-plus.git" }
 schemars = "0.8.3"
 semver = "1"
-serde = { version = "1.0.0", default-features = false, features = ["derive"] }
-thiserror = "1.0.13"
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+thiserror = "1.0.23"
 
 [dev-dependencies]
-cw-storage-plus = { git ="https://github.com/oraichain/cw-storage-plus.git" }
 prost = "0.11.0"
 anyhow = "1.0.65" # Not used directly but prost-derive does not set a sufficiently high anyhow version
