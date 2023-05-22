@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{StdError, StdResult, Storage};
 use cw_storage_plus::Item;
 use semver::Version;
@@ -16,6 +17,25 @@ pub struct ContractVersion {
 
 pub const CONTRACT: Item<ContractVersion> = Item::new("contract_info");
 
+/// get_contract_version can be use in migrate to read the previous version of this contract
+pub fn get_contract_version(store: &dyn Storage) -> StdResult<ContractVersion> {
+    CONTRACT.load(store)
+}
+
+/// set_contract_version should be used in instantiate to store the original version, and after a successful
+/// migrate to update it
+pub fn set_contract_version<T: Into<String>, U: Into<String>>(
+    store: &mut dyn Storage,
+    name: T,
+    version: U,
+) -> StdResult<()> {
+    let val = ContractVersion {
+        contract: name.into(),
+        version: version.into(),
+    };
+    CONTRACT.save(store, &val)
+}
+
 /// This function not only validates that the right contract and version can be migrated, but also
 /// updates the contract version from the original (stored) version to the new version.
 /// It returns the original version for the convenience of doing external checks.
@@ -25,7 +45,7 @@ pub fn ensure_from_older_version(
     new_version: &str,
 ) -> StdResult<Version> {
     let version: Version = new_version.parse().map_err(from_semver)?;
-    let stored = CONTRACT.load(storage)?;
+    let stored = get_contract_version(storage)?;
     let storage_version: Version = stored.version.parse().map_err(from_semver)?;
 
     if name != stored.contract {
@@ -42,11 +62,7 @@ pub fn ensure_from_older_version(
     }
     if storage_version < version {
         // we don't need to save anything if migrating from the same version
-        let val = ContractVersion {
-            contract: name.into(),
-            version: new_version.into(),
-        };
-        CONTRACT.save(storage, &val)
+        set_contract_version(storage, name, new_version)?;
     }
 
     Ok(storage_version)
